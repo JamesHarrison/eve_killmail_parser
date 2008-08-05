@@ -1,0 +1,27 @@
+h2. EVE Killmail Parser
+
+This is a Rails plugin to manage parsing the EVE Killmail format used in the online MMORPG EVE Online.
+
+h3. Example
+
+  km = Eve::Killmail::Parser.new(mail_to_parse_as_string)
+  km.victim.name # => 'Ix Forres'
+  km.attackers.each do |attacker|
+    attacker.name # => 'Attacker 1'
+  end
+  km.destroyed.each do |item|
+    item.name # => 'Item lost 1'
+  end
+
+h3. Installing
+
+Install to a Rails application using the following command (Rails 2.0.2 and greater)
+
+  ruby script/plugin install git://github.com/JamesHarrison/eve_killmail_parser.git
+  
+If you are using an older Rails version, use
+
+  git clone git://github.com/JamesHarrison/eve_killmail_parser.git vendor/plugins/eve_killmail_parser
+
+
+Copyright (c) 2008 James Harrison, released under the MIT license
