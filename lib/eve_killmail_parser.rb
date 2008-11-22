@@ -18,27 +18,49 @@ module Eve
         @attackers = []
         @destroyed = []
         @dropped = []
-        blocks = mail.split(/\n\n/)
+        mail.split(/\r/).length > 1 ? mailsep = /\r\n/ : mailsep = /\n/
+        mail_lines = mail.split(mailsep)
         destroyed_line = 0
         dropped_line = 0
         involved_line = 0
         end_line = 0
-        blocks.each_with_index do |line,index|
+        mail_lines.each_with_index do |line,index|
           destroyed_line = index if line.include?('Destroyed')
           dropped_line = index if line.include?('Dropped')
           involved_line = index if line.include?('Involved')
           end_line = index
         end
-        blocks[(involved_line+1)..(destroyed_line-1)].each do |line|
-          @attackers.push Eve::Killmail::Classes::Attacker.new(line.to_s)
+        attackers = mail_lines[(involved_line+1)..(destroyed_line-1)]
+        destroyed = mail_lines[(destroyed_line+1)..(dropped_line-1)]
+        dropped = mail_lines[(dropped_line+1)..(end_line)]
+        
+        # NOTES on splitting of mails
+        # 99.9999% of mails will use \r\n as a linebreak seperator.
+        attacker_block_indexes = []
+        attackers.each_with_index do |ln,idx|
+          if ln.size < 2 then # We're a gap between blocks!
+            attacker_block_indexes.push idx+involved_line+1 # Correct offset
+          end
         end
-        blocks[(destroyed_line+1)..(dropped_line-1)].each do |line|
-          line.split(/\n/).each do |item|
+        blocksep = '\r\n'
+        attacker_block_indexes.each_with_index do |abi,idx|
+          b = []
+          if attacker_block_indexes[idx+1]
+            b = mail_lines[(abi)..(attacker_block_indexes[idx+1])]
+          else
+            b = mail_lines[(abi)..(destroyed_line-1)]
+          end
+          if b.length > 2 # Check for blank lines here
+            @attackers.push Eve::Killmail::Classes::Attacker.new(b.join("\n"))
+          end
+        end
+        destroyed.each do |item|
+          if item.length > 2
             @destroyed.push Eve::Killmail::Classes::Item.new(item.to_s)
           end
         end
-        blocks[(dropped_line+1)..(end_line)].each do |line|
-          line.split(/\n/).each do |item|
+        dropped.each do |item|
+          if item.length > 2
             @dropped.push Eve::Killmail::Classes::Item.new(item.to_s)
           end
         end
@@ -61,7 +83,7 @@ module Eve
         attr_accessor :name, :security, :corporation, :alliance, :faction, :damage_taken, :destroyed, :system, :moon
         def initialize(block)
           @name = Eve::Killmail.line('Victim',block).gsub('Victim: ','').chomp.to_s
-          @moon = Eve::Killmail.line('Moon',block).gsub('Moon: ','').chomp.to_s
+          if block.include?'Moon:' then @moon = Eve::Killmail.line('Moon',block).gsub('Moon: ','').chomp.to_s end
           @system = Eve::Killmail.line('System',block).gsub('System: ','').chomp.to_s
           @security = Eve::Killmail.line('Security',block).gsub('Security: ','').to_f
           @corporation = Eve::Killmail.line('Corp',block).gsub('Corp: ','').chomp.to_s
@@ -85,15 +107,25 @@ module Eve
       # * faction (String) - Name of the character's faction (FW- not used in normal PVP, will be 'NONE')
       # * damage_done (Integer) - Amount of damage given by the character
       # * ship (String) - Type name of the attacking ship
+      # * final_blow (Boolean) - True if this attacker laid the final blow on the victim
       # * weapon (String) - Name of the weapon used by the attacker
       class Attacker
-        attr_accessor :name, :security, :corporation, :alliance, :faction, :damage_done, :ship, :weapon
+        attr_accessor :name, :security, :corporation, :alliance, :faction, :damage_done, :ship, :weapon, :final_blow
         def initialize(block)
+          if block.include?'(laid the final blow)'
+            @final_blow = true
+          else
+            @final_blow = false
+          end
           @name = Eve::Killmail.line('Name',block).gsub('Name: ','').gsub(' (laid the final blow)','').chomp.to_s
           @security = Eve::Killmail.line('Security',block).gsub('Security: ','').to_f
           @corporation = Eve::Killmail.line('Corp',block).gsub('Corp: ','').chomp.to_s
           @alliance = Eve::Killmail.line('Alliance',block).gsub('Alliance: ','').chomp.to_s
-          @faction = Eve::Killmail.line('Faction',block).gsub('Faction: ','').chomp.to_s
+          if block.include?'Faction: '
+            @faction = Eve::Killmail.line('Faction',block).gsub('Faction: ','').chomp.to_s
+          else
+            @faction = 'NONE'
+          end
           @damage_done = Eve::Killmail.line('Damage Done',block).gsub('Damage Done: ','').to_i
           @ship = Eve::Killmail.line('Ship',block).gsub('Ship: ','').chomp.to_s
           @weapon = Eve::Killmail.line('Weapon',block).gsub('Weapon: ','').chomp.to_s
@@ -118,7 +150,7 @@ module Eve
           @drone = true if block.include?('(Drone Bay)')
           qtytmp = block.match(/(?:.*)(?:Qty: )(\d+)/)
           @quantity = qtytmp[1].to_i if qtytmp
-          nmetmp = block.match(/([\w' ]+).*$/)
+          nmetmp = block.match(/([\w' -]+).*$/)
           @name = nmetmp[1].to_s if nmetmp
         end
       end
