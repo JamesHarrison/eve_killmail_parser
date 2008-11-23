@@ -79,11 +79,12 @@ module Eve
       # * damage_taken (Integer) - Amount of damage taken by the character
       # * destroyed (String) - Type name of the destroyed ship
       # * system (String) - Name of the system the character was destroyed in
+      # * moon (String) - Name of the moon a POS was anchored at (nil if not a POS killmail)
       class Victim
         attr_accessor :name, :security, :corporation, :alliance, :faction, :damage_taken, :destroyed, :system, :moon
         def initialize(block)
           @name = Eve::Killmail.line('Victim',block).gsub('Victim: ','').chomp.to_s
-          if block.include?'Moon:' then @moon = Eve::Killmail.line('Moon',block).gsub('Moon: ','').chomp.to_s end
+          @moon = Eve::Killmail.line('Moon',block).gsub('Moon: ','').chomp.to_s if block.include?'Moon:'
           @system = Eve::Killmail.line('System',block).gsub('System: ','').chomp.to_s
           @security = Eve::Killmail.line('Security',block).gsub('Security: ','').to_f
           @corporation = Eve::Killmail.line('Corp',block).gsub('Corp: ','').chomp.to_s
@@ -104,31 +105,38 @@ module Eve
       # * security (Float) - Security Status of the character
       # * corporation (String) - Name of the character's corporation
       # * alliance (String) - Name of the charcter's alliance
-      # * faction (String) - Name of the character's faction (FW- not used in normal PVP, will be 'NONE')
+      # * faction (String) - Name of the character's faction. Will be nil if this is not a FW killmail.
       # * damage_done (Integer) - Amount of damage given by the character
       # * ship (String) - Type name of the attacking ship
       # * final_blow (Boolean) - True if this attacker laid the final blow on the victim
       # * weapon (String) - Name of the weapon used by the attacker
+      # * object (Boolean) - If this is true, then only weapon, corporation, and damage done will be set (used for POS attacking pilots)
       class Attacker
-        attr_accessor :name, :security, :corporation, :alliance, :faction, :damage_done, :ship, :weapon, :final_blow
+        attr_accessor :name, :security, :corporation, :alliance, :faction, :damage_done, :ship, :weapon, :final_blow, :object
         def initialize(block)
+          if block.include? 'Corp: '
+            @object = false
+          else
+            @object = true
+          end
           if block.include?'(laid the final blow)'
             @final_blow = true
           else
             @final_blow = false
           end
-          @name = Eve::Killmail.line('Name',block).gsub('Name: ','').gsub(' (laid the final blow)','').chomp.to_s
-          @security = Eve::Killmail.line('Security',block).gsub('Security: ','').to_f
-          @corporation = Eve::Killmail.line('Corp',block).gsub('Corp: ','').chomp.to_s
-          @alliance = Eve::Killmail.line('Alliance',block).gsub('Alliance: ','').chomp.to_s
-          if block.include?'Faction: '
-            @faction = Eve::Killmail.line('Faction',block).gsub('Faction: ','').chomp.to_s
+          unless @object
+            @name = Eve::Killmail.line('Name',block).gsub('Name: ','').gsub(' (laid the final blow)','').chomp.to_s
+            @security = Eve::Killmail.line('Security',block).gsub('Security: ','').to_f
+            @corporation = Eve::Killmail.line('Corp',block).gsub('Corp: ','').chomp.to_s
+            @alliance = Eve::Killmail.line('Alliance',block).gsub('Alliance: ','').chomp.to_s
+            @faction = Eve::Killmail.line('Faction',block).gsub('Faction: ','').chomp.to_s if block.include?'Faction: '
+            @ship = Eve::Killmail.line('Ship',block).gsub('Ship: ','').chomp.to_s
+            @weapon = Eve::Killmail.line('Weapon',block).gsub('Weapon: ','').chomp.to_s
           else
-            @faction = 'NONE'
+            @weapon = Eve::Killmail.line('Name',block).gsub('Name: ','').match(/(.+) \/ (.+)/)[1]
+            @corporation = Eve::Killmail.line('Name',block).gsub('Name: ','').match(/(.+) \/ (.+)/)[2]
           end
           @damage_done = Eve::Killmail.line('Damage Done',block).gsub('Damage Done: ','').to_i
-          @ship = Eve::Killmail.line('Ship',block).gsub('Ship: ','').chomp.to_s
-          @weapon = Eve::Killmail.line('Weapon',block).gsub('Weapon: ','').chomp.to_s
         end
       end
       # Class for an item in the killmail.
