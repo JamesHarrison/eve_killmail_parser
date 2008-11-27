@@ -711,15 +711,41 @@ Light Neutron Blaster I  "
     assert_equal true, @normal_km.destroyed[4].cargo
     assert_equal true, @normal_km.destroyed[6].drone
   end
-  def test_nonplayer_attacking_attackers
+  def test_nonplayer_attacker
     assert_equal 'Medium Railgun Battery', @nonplayer_attacking_km.attackers[0].weapon
     assert_equal 'Holiday On ICE', @nonplayer_attacking_km.attackers[0].corporation
     assert_equal true, @nonplayer_attacking_km.attackers[0].object
+    assert_equal 9, @nonplayer_attacking_km.attackers.length
+  end
+  def test_nonplayer_attacking_attackers
+    assert_equal 'Zostera', @nonplayer_attacking_km.attackers[1].name
+    assert_equal 3.1, @nonplayer_attacking_km.attackers[1].security
+    assert_equal 'Ascent of Ages', @nonplayer_attacking_km.attackers[1].corporation
+    assert_equal 'Sc0rched Earth', @nonplayer_attacking_km.attackers[1].alliance
+    assert_equal 'NONE', @nonplayer_attacking_km.attackers[1].faction
+    assert_equal 'Hound', @nonplayer_attacking_km.attackers[1].ship
+    assert_equal 'Devastator Cruise Missile', @nonplayer_attacking_km.attackers[1].weapon
+    assert_equal 6695, @nonplayer_attacking_km.attackers[1].damage_done
+    assert_equal false, @nonplayer_attacking_km.attackers[1].object
+    assert_equal true, @nonplayer_attacking_km.attackers[1].final_blow
   end
   def test_warp_bubble_attacker
     assert_equal 'Mobile Large Warp Disruptor I', @warp_bubble_km.attackers[2].weapon
     assert_equal 'Free Galactic Enterprises', @warp_bubble_km.attackers[2].corporation
     assert_equal true, @warp_bubble_km.attackers[2].object
+    assert_equal 7, @warp_bubble_km.attackers.length
+  end
+
+  def test_warp_bubble_attacker_attackers
+    assert_equal 'Mistralis', @warp_bubble_km.attackers[0].name
+    assert_equal 5.0, @warp_bubble_km.attackers[0].security
+    assert_equal 'Free Galactic Enterprises', @warp_bubble_km.attackers[0].corporation
+    assert_equal 'Violent-Tendencies', @warp_bubble_km.attackers[0].alliance
+    assert_equal 'NONE', @warp_bubble_km.attackers[0].faction
+    assert_equal 'Crow', @warp_bubble_km.attackers[0].ship
+    assert_equal 'Crow', @warp_bubble_km.attackers[0].weapon
+    assert_equal 364, @warp_bubble_km.attackers[0].damage_done
+    assert_equal false, @warp_bubble_km.attackers[0].object
   end
   
 end
