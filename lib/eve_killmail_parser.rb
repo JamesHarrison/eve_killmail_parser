@@ -100,9 +100,15 @@ module Eve
       # * system (String) - Name of the system the character was destroyed in
       # * moon (String) - Name of the moon a POS was anchored at (nil if not a POS killmail)
       class Victim
-        attr_accessor :name, :security, :corporation, :alliance, :faction, :damage_taken, :destroyed, :system, :moon
+        attr_accessor :name, :security, :corporation, :alliance, :faction, :damage_taken, :destroyed, :system, :moon, :object
         def initialize(block)
-          @name = Eve::Killmail.line('Victim',block).gsub('Victim: ','').chomp.to_s
+          @object = false
+          if block.include? 'Victim: '
+            @name = Eve::Killmail.line('Victim',block).gsub('Victim: ','').chomp.to_s
+          else
+            @name = Eve::Killmail.line('Destroyed',block).gsub('Destroyed: ','').chomp.to_s
+            @object = true
+          end
           @moon = Eve::Killmail.line('Moon',block).gsub('Moon: ','').chomp.to_s if block.include?'Moon:'
           @system = Eve::Killmail.line('System',block).gsub('System: ','').chomp.to_s
           @security = Eve::Killmail.line('Security',block).gsub('Security: ','').to_f
