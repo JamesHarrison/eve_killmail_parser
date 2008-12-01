@@ -9,8 +9,9 @@ module Eve
     # * dropped ([Item]) - Array of items dropped
     # * destroyed ([Item]) - Array of items destroyed
     # * items ([Item]) - Addition of the two arrays above
+    # * podkill (boolean) - True if this mail has a pod victim (no destroyed/dropped items)
     class Parser
-      attr_accessor :date, :victim, :attackers, :dropped, :destroyed
+      attr_accessor :date, :victim, :attackers, :dropped, :destroyed, :podkill
       public
       def initialize(mail='')
         @date = mail.match(/((?:\d{4}).(?:\d{2})(?:.+))$/)[0]
@@ -18,21 +19,33 @@ module Eve
         @attackers = []
         @destroyed = []
         @dropped = []
+        @podkill = false
+        unless mail.include?('Destroyed items:') or mail.include?('Dropped items:')
+          @podkill = true
+        end
         mail.split(/\r/).length > 1 ? mailsep = /\r\n/ : mailsep = /\n/
         mail_lines = mail.split(mailsep)
-        destroyed_line = 0
-        dropped_line = 0
+        unless @podkill
+          destroyed_line = 0
+          dropped_line = 0
+        end
         involved_line = 0
         end_line = 0
         mail_lines.each_with_index do |line,index|
-          destroyed_line = index if line.include?('Destroyed')
-          dropped_line = index if line.include?('Dropped')
+          unless @podkill
+            destroyed_line = index if line.include?('Destroyed')
+            dropped_line = index if line.include?('Dropped')
+          end
           involved_line = index if line.include?('Involved')
           end_line = index
         end
-        attackers = mail_lines[(involved_line+1)..(destroyed_line-1)]
-        destroyed = mail_lines[(destroyed_line+1)..(dropped_line-1)]
-        dropped = mail_lines[(dropped_line+1)..(end_line)]
+        unless @podkill
+          attackers = mail_lines[(involved_line+1)..(destroyed_line-1)]
+          destroyed = mail_lines[(destroyed_line+1)..(dropped_line-1)]
+          dropped = mail_lines[(dropped_line+1)..(end_line)]
+        else
+          attackers = mail_lines[(involved_line+1)..end_line]
+        end
         
         # NOTES on splitting of mails
         # 99.9999% of mails will use \r\n as a linebreak seperator.
@@ -48,20 +61,26 @@ module Eve
           if attacker_block_indexes[idx+1]
             b = mail_lines[(abi)..(attacker_block_indexes[idx+1])]
           else
-            b = mail_lines[(abi)..(destroyed_line-1)]
+            unless @podkill
+              b = mail_lines[(abi)..(destroyed_line-1)]
+            else
+              b = mail_lines[(abi)..(end_line)]
+            end
           end
           if b.length > 2 # Check for blank lines here
             @attackers.push Eve::Killmail::Classes::Attacker.new(b.join("\n"))
           end
         end
-        destroyed.each do |item|
-          if item.length > 2
-            @destroyed.push Eve::Killmail::Classes::Item.new(item.to_s)
+        unless @podkill
+          destroyed.each do |item|
+            if item.length > 2
+              @destroyed.push Eve::Killmail::Classes::Item.new(item.to_s)
+            end
           end
-        end
-        dropped.each do |item|
-          if item.length > 2
-            @dropped.push Eve::Killmail::Classes::Item.new(item.to_s)
+          dropped.each do |item|
+            if item.length > 2
+              @dropped.push Eve::Killmail::Classes::Item.new(item.to_s)
+            end
           end
         end
       end

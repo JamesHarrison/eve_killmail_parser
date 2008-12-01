@@ -3,6 +3,45 @@ require 'eve_killmail_parser'
 class EveKillmailParserTest < Test::Unit::TestCase
   
   def setup
+    pod_mail = "2008.11.03 05:03:00
+
+Victim: Pinky Panther
+Corp: Southern Cross Incorporated
+Alliance: Southern Cross Alliance
+Faction: NONE
+Destroyed: Capsule
+System: LXQ2-T
+Security: 0.0
+Damage Taken: 451
+
+Involved parties:
+
+Name: iaitite (laid the final blow)
+Security: 0.2
+Corp: Vanguard Frontiers
+Alliance: Violent-Tendencies
+Faction: NONE
+Ship: Nemesis
+Weapon: Caldari Navy Devastator Cruise Missile
+Damage Done: 278
+
+Name: Xirxo
+Security: 2.3
+Corp: Vanguard Frontiers
+Alliance: Violent-Tendencies
+Faction: NONE
+Ship: Rapier
+Weapon: 650mm Artillery Cannon II
+Damage Done: 173
+
+Name: Freya Alvar
+Security: 2.2
+Corp: Vanguard Frontiers
+Alliance: Violent-Tendencies
+Faction: NONE
+Ship: Manticore
+Weapon: 'Arbalest' Cruise Launcher I
+Damage Done: 0"
     nonplayer_attacking_mail = "
     2008.11.17 15:46
 
@@ -669,13 +708,24 @@ Light Neutron Blaster I  "
     @nonplayer_attacking_km = Eve::Killmail::Parser.new(nonplayer_attacking_mail)
     @pos_km = Eve::Killmail::Parser.new(pos_mail)
     @warp_bubble_km = Eve::Killmail::Parser.new(warp_bubble_mail)
+    @pod_km = Eve::Killmail::Parser.new(pod_mail)
   end
   def test_load_normal
     assert_instance_of Eve::Killmail::Parser, @normal_km
   end
   def test_load_nonplayer_attacking
-    assert_instance_of Eve::Killmail::Parser, @normal_km
+    assert_instance_of Eve::Killmail::Parser, @nonplayer_attacking_km
   end
+  def test_load_warp_bubble
+    assert_instance_of Eve::Killmail::Parser, @warp_bubble_km
+  end
+  def test_load_pos
+    assert_instance_of Eve::Killmail::Parser, @pos_km
+  end
+  def test_load_pod
+    assert_instance_of Eve::Killmail::Parser, @pod_km
+  end
+  
   def test_victim
     assert_equal 'Ix Forres', @normal_km.victim.name
     assert_equal 'Vanguard Frontiers', @normal_km.victim.corporation
@@ -720,6 +770,29 @@ Light Neutron Blaster I  "
     assert_equal 'Mobile Large Warp Disruptor I', @warp_bubble_km.attackers[2].weapon
     assert_equal 'Free Galactic Enterprises', @warp_bubble_km.attackers[2].corporation
     assert_equal true, @warp_bubble_km.attackers[2].object
+  end
+  
+  def test_pod_attackers
+    assert_equal 'iaitite', @pod_km.attackers[0].name
+    assert_equal 0.2, @pod_km.attackers[0].security
+    assert_equal 'Vanguard Frontiers', @pod_km.attackers[0].corporation
+    assert_equal 'Violent-Tendencies', @pod_km.attackers[0].alliance
+    assert_equal 'NONE', @pod_km.attackers[0].faction
+    assert_equal 'Nemesis', @pod_km.attackers[0].ship
+    assert_equal 'Caldari Navy Devastator Cruise Missile', @pod_km.attackers[0].weapon
+    assert_equal 278, @pod_km.attackers[0].damage_done
+    assert_equal false, @pod_km.attackers[0].object
+  end
+  
+  def test_pod_victim
+    assert_equal 'Pinky Panther', @pod_km.victim.name
+    assert_equal 'Southern Cross Incorporated', @pod_km.victim.corporation
+    assert_equal 'Southern Cross Alliance', @pod_km.victim.alliance
+    assert_equal 'NONE', @pod_km.victim.faction
+    assert_equal 'Capsule', @pod_km.victim.destroyed
+    assert_equal 'LXQ2-T', @pod_km.victim.system
+    assert_equal 0.0, @pod_km.victim.security
+    assert_equal 451, @pod_km.victim.damage_taken
   end
   
 end
